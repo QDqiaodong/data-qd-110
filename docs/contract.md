@@ -22,3 +22,8 @@ available_g=本批质量-所有配方消耗，不把中间产物的总量重复�
 带回流/自环的稳态物流不属于本无环批次模型，其独立契约见
 [contract_recycle.md](contract_recycle.md)（schema_version 2，
 `python -m lot_lineage.recycle`），两套表名与返回结构互不影响。
+
+本模型只接受**完整**快照。分批到达的原始称量小票须先经独立采集库
+`intake_tickets` 收票、封账后再导出本契约要求的 `lots/recipes` JSON，见
+[contract_intake.md](contract_intake.md)（`python -m lot_lineage.intake`）；
+两套表名互不重叠，采集库不改变本模型的校验、统计口径或既有入口。

@@ -8,8 +8,7 @@ def grams(value,zero=False):
     if value>10**12:raise ValueError('mass exceeds supported limit')
     return value
 
-def load(path):
-    data=json.loads(Path(path).read_text(encoding='utf-8'))
+def validate_document(data):
     if not isinstance(data,dict) or set(data)!={'lots','recipes'}:raise ValueError('expected lots and recipes')
     if not isinstance(data['lots'],list) or not isinstance(data['recipes'],list):raise ValueError('expected arrays')
     lots={}
@@ -39,6 +38,10 @@ def load(path):
     for key,value in consumed.items():
         if value>lots[key]['mass_g']:raise ValueError('lot over-consumed: '+key)
     return lots,recipes,consumed
+
+def load(path):
+    data=json.loads(Path(path).read_text(encoding='utf-8'))
+    return validate_document(data)
 
 def propagate(lots,recipes):
     children=defaultdict(list);degree={k:0 for k in lots}

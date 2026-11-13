@@ -1,0 +1,9 @@
+ticket_id,kind,lot_id,input_lot_id,mass,unit
+T-0004,raw,A,,1000,g
+T-0005,raw,B,,500,g
+T-0006,raw,C,,300,g
+T-0007,output,X,,900,g
+T-0008,input,Y,X,300,g
+T-0009,input,Y,C,200,g
+T-0010,output,Y,,450,g
+T-0011,loss,Y,,50,g

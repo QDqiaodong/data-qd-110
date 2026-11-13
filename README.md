@@ -74,6 +74,50 @@ PYTHONPATH=src python3 -m lot_lineage.recycle \
 
 转换视图复现旧来源比例与产品来源总量，并给出损耗来源 A=60g、B=40g。
 
+## 离线称量小票采集与封账导出（独立新能力）
+
+电子秤按文件分批导出称量小票，原料登记、成品产出、投入称量和损耗小票可能
+分几次到达。现有批次追溯只接收完整 `lots`/`recipes` JSON，不能把尚未凑齐的
+生产记录当成完整谱系。新增的 `lot_lineage.intake` 把这些多次到达的原始小票
+先收进独立 SQLite 库，操作者**封账**后才导出一份可直接交给现有批次追溯的
+完整 JSON。
+
+小票 CSV 表头精确有序为 `ticket_id,kind,lot_id,input_lot_id,mass,unit`。
+`kind` 为 `raw`/`output`/`input`/`loss`；`lot_id` 对 `raw` 指原料批次，
+对其他三种指产出批次；仅 `input` 必须填写 `input_lot_id`；`unit` 只接受
+`g`/`kg`，质量按整数克精确换算（不经 `float`）。完整字段、事务与封账契约见
+[`docs/contract_intake.md`](docs/contract_intake.md)。
+
+```sh
+PYTHONPATH=src python3 -m lot_lineage.intake ingest \
+  --database run/intake.sqlite --campaign ceramic-1 --source fixtures/intake/batch1.csv
+PYTHONPATH=src python3 -m lot_lineage.intake ingest \
+  --database run/intake.sqlite --campaign ceramic-1 --source fixtures/intake/batch2.csv
+PYTHONPATH=src python3 -m lot_lineage.intake status \
+  --database run/intake.sqlite --campaign ceramic-1
+PYTHONPATH=src python3 -m lot_lineage.intake seal \
+  --database run/intake.sqlite --campaign ceramic-1
+PYTHONPATH=src python3 -m lot_lineage.intake export \
+  --database run/intake.sqlite --campaign ceramic-1 --output run/sealed.json
+# 交回现有批次追溯（旧 CLI 原样可用）
+PYTHONPATH=src python3 -m lot_lineage.cli \
+  --source run/sealed.json --database run/lineage.sqlite
+```
+
+示例先送 X 投入 A 600 g / B 0.400 kg 及损耗 100 g（`batch1.csv`），再补
+A 1000 g、B 500 g、C 300 g、X 产出 900 g、Y 投入 X 300 g / C 200 g、
+Y 产出 450 g 与损耗 50 g（`batch2.csv`）。封账导出后旧 CLI 得到原料 1800、
+损耗 150、可用 1650 克；Y 的 A/B/C 比例 9/25、6/25、2/5，可用来源
+A 922、B 448、C 280 克。
+
+同一 campaign 内 `ticket_id` 是小票业务身份：规范化内容完全相同（`0.500 kg`
+与 `500 g` 等价）视为重传，不重复扣料；相同 ID 不同内容为冲突，整次文件
+回滚。不同 `ticket_id` 即使内容相同也是独立称量。封账在单一事务中保存
+不可变的规范 JSON 及 SHA256 并把 campaign 变为 `sealed`，之后任何 `ingest`
+都拒绝（即使只重传旧票），不提供解封或更正。不同 campaign 的票与批次 ID
+可重用且互不混算。移走原始 CSV 后，仍可从库中读取原文、核对 SHA256，并
+查到每张规范票的全部来源与记录位置、每条封账配方边由哪些票累加形成。
+
 ## 安装与运行
 
 要求 Python 3.11 或更高；先确认 `python3 --version`。以下命令在仓库根目录执行：
@@ -96,12 +140,16 @@ fixture。CLI 参数错误或无效数据返回非零；失败原因打印到 st
 ## 目录
 
 - `src/lot_lineage/`：批次解析、业务转换及命令行入口。
+- `src/lot_lineage/intake/`：离线称量小票采集、封账、导出与
+  `python -m lot_lineage.intake` 入口（SQLite 独立格式 `intake_tickets`）。
 - `src/lot_lineage/recycle/`：schema_version 2 稳态校验、SCC 精确求解、
   SQLite 分析库与 `python -m lot_lineage.recycle` 入口。
-- `fixtures/`：MIT 许可的合成输入（含批次、PQ 循环、转换视图、多级循环演示例）。
+- `fixtures/`：MIT 许可的合成输入（含批次、PQ 循环、转换视图、多级循环演示例，
+  以及 `fixtures/intake/` 下分两批到达的合成称量小票）。
 - `examples/convert_lots_to_steady.py`：批次快照到稳态 JSON 的转换脚本。
-- `docs/contract.md`、`docs/contract_recycle.md`：两套字段与口径、边界及失败约定。
-- `tests/`：业务结果、边界与失败测试（旧 9 项 + 稳态 34 项）。
+- `docs/contract.md`、`docs/contract_recycle.md`、`docs/contract_intake.md`：
+  三套字段与口径、边界及失败约定。
+- `tests/`：业务结果、边界与失败测试（旧 9 项 + 稳态 37 项 + 采集封账 59 项）。
 - `requirements*.lock`、`pyproject.toml`：环境和构建声明。
 
 本基线不承诺实时同步或生产调度。仅验证本机环境的事实见交付记录；本仓库不
