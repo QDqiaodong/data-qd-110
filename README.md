@@ -169,6 +169,51 @@ PYTHONPATH=src python3 -m lot_lineage.snapshot gc --store run/snapshots
 PYTHONPATH=src python3 examples/snapshot_demo.py
 ```
 
+## 小票模型差分 CLI（独立新能力）
+
+新增的 `lot_lineage.diffharness` 是采集小票模型的黑盒差分测试器，四个子命令
+`generate`/`run`/`reduce`/`replay` 全部只用 Python 标准库。它自带一个**独立
+内存模型**，从契约文本重新实现 CSV 解析、单位整数换算、重传/冲突身份、封账
+八条核验、无环检查与规范封账 JSON；整个包不 import 任何生产解析/校验/封账
+函数（测试以源码扫描强制）。被测命令通过可配置前缀以**真实子进程**运行，
+每次执行与每个约简候选都使用**全新空临时库**，库状态只用标准库 `sqlite3`
+只读观测。完整字段、退出码与失败约定见
+[`docs/contract_diffharness.md`](docs/contract_diffharness.md)。
+
+`generate` 按 seed/steps 确定性地生成跨两个 campaign（外加 unknown 只读路径）
+的 ingest/seal/status/export 序列，覆盖等价重传、同票冲突（单文件与跨文件）、
+缺票补齐、封账后新票/重传/坏文件、坏表头/参差行/坏单位/非整克等分支；同
+seed/steps 的场景 JSON 逐字节一致，CSV 全文内嵌、自包含。
+
+```sh
+PYTHONPATH=src python3 -m lot_lineage.diffharness generate \
+  --seed 42 --steps 27 --output run/diff/scenario.json
+# 正常实现：退出码 0，只报覆盖计数，不宣称无错
+PYTHONPATH=src python3 -m lot_lineage.diffharness run \
+  --scenario run/diff/scenario.json
+# 可指定被测命令前缀（如故障包装器）；发现差异退出码 4 并写自包含反例
+PYTHONPATH=src python3 -m lot_lineage.diffharness run \
+  --scenario run/diff/scenario.json \
+  --prefix "python3 tests/buggy_wrappers/buggy_dup_count.py" \
+  --counterexample run/diff/ce.json
+# 三轮约简（删操作→删 CSV 记录→缩小质量），每候选空库重跑，仅保留同签名
+PYTHONPATH=src python3 -m lot_lineage.diffharness reduce \
+  --counterexample run/diff/ce.json --budget 400 \
+  --prefix "python3 tests/buggy_wrappers/buggy_dup_count.py" \
+  --output run/diff/reduced.json
+# replay 只读反例内嵌 CSV 与操作，不依赖 seed/generate 产物
+PYTHONPATH=src python3 -m lot_lineage.diffharness replay \
+  --counterexample run/diff/reduced.json \
+  --prefix "python3 tests/buggy_wrappers/buggy_dup_count.py"
+```
+
+差异判定依次比较成败类别、回执投影、独立 SQL 库视图（票/来源关系、封账边、
+封账 JSON）与导出文件字节；预测失败的操作若改动库或旧导出即判差异。反例 JSON
+内含原始 CSV、操作、首差异签名及预期/实际。交付的三个仅标准库故障包装器
+（`tests/buggy_wrappers/`：等价重传重复计票、冲突部分提交、封账后仍接收）都能
+被检出，约简后在新进程重现同签名；透明包装器与真实 CLI 全场景零误报。预算
+耗尽如实标记 `complete=false`；无差异只给覆盖计数。
+
 ## 安装与运行
 
 要求 Python 3.11 或更高；先确认 `python3 --version`。以下命令在仓库根目录执行：
@@ -197,14 +242,20 @@ fixture。CLI 参数错误或无效数据返回非零；失败原因打印到 st
   SQLite 分析库与 `python -m lot_lineage.recycle` 入口。
 - `src/lot_lineage/snapshot/`：三套业务库的只读快照、内容寻址对象、
   不可变清单、校验/恢复/forget/gc 与 `python -m lot_lineage.snapshot` 入口。
+- `src/lot_lineage/diffharness/`：小票模型黑盒差分 CLI（generate/run/reduce/
+  replay）、独立内存预言机、真实子进程运行器与确定性约简，仅标准库，
+  不 import 任何生产解析/校验/封账函数。
 - `fixtures/`：MIT 许可的合成输入（含批次、PQ 循环、转换视图、多级循环演示例，
   以及 `fixtures/intake/` 下分两批到达的合成称量小票）。
 - `examples/convert_lots_to_steady.py`：批次快照到稳态 JSON 的转换脚本。
 - `examples/snapshot_demo.py`：三库快照、移源后恢复、WAL 并发与 gc 演示。
+- `tests/buggy_wrappers/`：仅标准库的被测命令故障包装器（重复计票、冲突部分
+  提交、封账后仍接收）与一个透明包装器，经 `--prefix` 注入，不改生产源码。
 - `docs/contract.md`、`docs/contract_recycle.md`、`docs/contract_intake.md`、
-  `docs/contract_snapshot.md`：四套字段与口径、边界及失败约定。
+  `docs/contract_snapshot.md`、`docs/contract_diffharness.md`：五套字段与口径、
+  边界及失败约定。
 - `tests/`：业务结果、边界与失败测试（旧 9 项 + 稳态 37 项 + 采集封账 59 项
-  + 快照 65 项）。
+  + 快照 65 项 + 差分 20 项）。
 - `requirements*.lock`、`pyproject.toml`：环境和构建声明。
 
 本基线不承诺实时同步或生产调度。仅验证本机环境的事实见交付记录；本仓库不
