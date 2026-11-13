@@ -118,6 +118,57 @@ A 922、B 448、C 280 克。
 可重用且互不混算。移走原始 CSV 后，仍可从库中读取原文、核对 SHA256，并
 查到每张规范票的全部来源与记录位置、每条封账配方边由哪些票累加形成。
 
+## 离线库快照与库外恢复（独立新能力）
+
+三套业务库（批次库、稳态库、采集库）都只是磁盘上的 SQLite 文件。需要在不
+改动活库的前提下留一份可校验、可恢复的离线副本时，新增的
+`lot_lineage.snapshot` 把源库只读地读成一个**固定已提交快照**，按固定
+65536 字节块写成内容寻址对象，再发布一份不可变清单；清单的 SHA256 就是
+快照 ID。恢复时把整像原样发布为库外**新文件**，可直接交给旧入口继续使用。
+
+- 源库只读：不写主文件、不 checkpoint、不替换；并发写者未提交的数据不可见，
+  写者可以继续提交；已经提交在 WAL 中的数据属于快照。capture 结束会把本次
+  只读打开**新建**的 `-wal`/`-shm` 缓存文件删掉，已存在的 sidecar 不动。
+- 块有序，最后一块可短，相同块可重复出现；相同字节的块只存一份对象。
+- 对象完整写入并 fsync 后才引用它的清单才可能发布；清单原子改名即提交。
+  失败清理本次临时文件，无人引用的孤块留待 `gc`。
+- `verify` 逐块核对摘要与长度、整像 SHA256、SQLite 完整性/外键与库族；
+  `forget` 只删清单；`gc` 先验证全部引用对象，再删除孤块，I/O 部分删除
+  如实报告。拒绝未知族、坏格式、符号链接、穿越与别名。
+- 恢复保留全部数据、SQLite 类型与模式；副本可继续 ingest/seal/export，
+  已封账 campaign 仍拒绝 ingest。不提供逻辑去重、签名、跨版本确定性与
+  断电保证。完整契约见 [`docs/contract_snapshot.md`](docs/contract_snapshot.md)。
+
+```sh
+# 先后构建三套库（上一节命令），再对它们做快照
+PYTHONPATH=src python3 -m lot_lineage.snapshot capture \
+  --database run/lineage.sqlite --store run/snapshots --family lineage
+PYTHONPATH=src python3 -m lot_lineage.snapshot capture \
+  --database run/recycle.sqlite --store run/snapshots --family recycle
+PYTHONPATH=src python3 -m lot_lineage.snapshot capture \
+  --database run/intake.sqlite --store run/snapshots --family intake_tickets
+PYTHONPATH=src python3 -m lot_lineage.snapshot list --store run/snapshots
+PYTHONPATH=src python3 -m lot_lineage.snapshot verify --store run/snapshots
+# 恢复为库外新文件（拒绝覆盖已有文件或源库本体）
+PYTHONPATH=src python3 -m lot_lineage.snapshot restore \
+  --store run/snapshots --snapshot <ID> --output run/restored-intake.sqlite \
+  --library run/intake.sqlite
+# 恢复出的采集库仍可 status/export，再交给旧 CLI
+PYTHONPATH=src python3 -m lot_lineage.intake status \
+  --database run/restored-intake.sqlite --campaign ceramic-1
+# 只删清单，再回收无人引用的块
+PYTHONPATH=src python3 -m lot_lineage.snapshot forget \
+  --store run/snapshots --snapshot <ID>
+PYTHONPATH=src python3 -m lot_lineage.snapshot gc --store run/snapshots
+```
+
+一次跑完全部演示（建三库、快照、移走源库与原始 CSV 后恢复、WAL 并发写、
+重复共享块与 >3 块 BLOB、独立可达集与 gc）：
+
+```sh
+PYTHONPATH=src python3 examples/snapshot_demo.py
+```
+
 ## 安装与运行
 
 要求 Python 3.11 或更高；先确认 `python3 --version`。以下命令在仓库根目录执行：
@@ -144,12 +195,16 @@ fixture。CLI 参数错误或无效数据返回非零；失败原因打印到 st
   `python -m lot_lineage.intake` 入口（SQLite 独立格式 `intake_tickets`）。
 - `src/lot_lineage/recycle/`：schema_version 2 稳态校验、SCC 精确求解、
   SQLite 分析库与 `python -m lot_lineage.recycle` 入口。
+- `src/lot_lineage/snapshot/`：三套业务库的只读快照、内容寻址对象、
+  不可变清单、校验/恢复/forget/gc 与 `python -m lot_lineage.snapshot` 入口。
 - `fixtures/`：MIT 许可的合成输入（含批次、PQ 循环、转换视图、多级循环演示例，
   以及 `fixtures/intake/` 下分两批到达的合成称量小票）。
 - `examples/convert_lots_to_steady.py`：批次快照到稳态 JSON 的转换脚本。
-- `docs/contract.md`、`docs/contract_recycle.md`、`docs/contract_intake.md`：
-  三套字段与口径、边界及失败约定。
-- `tests/`：业务结果、边界与失败测试（旧 9 项 + 稳态 37 项 + 采集封账 59 项）。
+- `examples/snapshot_demo.py`：三库快照、移源后恢复、WAL 并发与 gc 演示。
+- `docs/contract.md`、`docs/contract_recycle.md`、`docs/contract_intake.md`、
+  `docs/contract_snapshot.md`：四套字段与口径、边界及失败约定。
+- `tests/`：业务结果、边界与失败测试（旧 9 项 + 稳态 37 项 + 采集封账 59 项
+  + 快照 65 项）。
 - `requirements*.lock`、`pyproject.toml`：环境和构建声明。
 
 本基线不承诺实时同步或生产调度。仅验证本机环境的事实见交付记录；本仓库不

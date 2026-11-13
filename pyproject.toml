@@ -11,5 +11,6 @@ dependencies = []
 lot-lineage = "lot_lineage.cli:main"
 lot-lineage-recycle = "lot_lineage.recycle.__main__:main"
 lot-lineage-intake = "lot_lineage.intake.__main__:main"
+lot-lineage-snapshot = "lot_lineage.snapshot.__main__:main"
 [tool.setuptools.packages.find]
 where = ["src"]
