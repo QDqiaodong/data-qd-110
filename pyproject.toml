@@ -9,5 +9,6 @@ requires-python = ">=3.11"
 dependencies = []
 [project.scripts]
 lot-lineage = "lot_lineage.cli:main"
+lot-lineage-recycle = "lot_lineage.recycle.__main__:main"
 [tool.setuptools.packages.find]
 where = ["src"]

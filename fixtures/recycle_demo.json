@@ -1,0 +1,140 @@
+{
+  "schema_version": 2,
+  "processes": [
+    {
+      "process_id": "M1"
+    },
+    {
+      "process_id": "M2"
+    },
+    {
+      "process_id": "M3"
+    },
+    {
+      "process_id": "M4"
+    },
+    {
+      "process_id": "M5"
+    },
+    {
+      "process_id": "M6"
+    },
+    {
+      "process_id": "M7"
+    }
+  ],
+  "feeds": [
+    {
+      "feed_id": "f-A-M1",
+      "origin_id": "A",
+      "to_process": "M1",
+      "mass_g": 50
+    },
+    {
+      "feed_id": "f-B-M2",
+      "origin_id": "B",
+      "to_process": "M2",
+      "mass_g": 30
+    },
+    {
+      "feed_id": "f-C-M4",
+      "origin_id": "C",
+      "to_process": "M4",
+      "mass_g": 20
+    },
+    {
+      "feed_id": "f-D-M6",
+      "origin_id": "D",
+      "to_process": "M6",
+      "mass_g": 40
+    }
+  ],
+  "transfers": [
+    {
+      "transfer_id": "t-M1-M2",
+      "from_process": "M1",
+      "to_process": "M2",
+      "mass_g": 90
+    },
+    {
+      "transfer_id": "t-M2-M1",
+      "from_process": "M2",
+      "to_process": "M1",
+      "mass_g": 40
+    },
+    {
+      "transfer_id": "t-M2-M3",
+      "from_process": "M2",
+      "to_process": "M3",
+      "mass_g": 80
+    },
+    {
+      "transfer_id": "t-M3-self",
+      "from_process": "M3",
+      "to_process": "M3",
+      "mass_g": 25
+    },
+    {
+      "transfer_id": "t-M3-M4",
+      "from_process": "M3",
+      "to_process": "M4",
+      "mass_g": 70
+    },
+    {
+      "transfer_id": "t-M4-M5-a",
+      "from_process": "M4",
+      "to_process": "M5",
+      "mass_g": 78
+    },
+    {
+      "transfer_id": "t-M4-M5-b",
+      "from_process": "M4",
+      "to_process": "M5",
+      "mass_g": 52
+    },
+    {
+      "transfer_id": "t-M5-M4",
+      "from_process": "M5",
+      "to_process": "M4",
+      "mass_g": 40
+    },
+    {
+      "transfer_id": "t-M6-M7",
+      "from_process": "M6",
+      "to_process": "M7",
+      "mass_g": 15
+    }
+  ],
+  "sinks": [
+    {
+      "sink_id": "s-M3-product",
+      "from_process": "M3",
+      "kind": "product",
+      "mass_g": 10
+    },
+    {
+      "sink_id": "s-M5-product",
+      "from_process": "M5",
+      "kind": "product",
+      "mass_g": 45
+    },
+    {
+      "sink_id": "s-M5-loss",
+      "from_process": "M5",
+      "kind": "loss",
+      "mass_g": 45
+    },
+    {
+      "sink_id": "s-M6-product",
+      "from_process": "M6",
+      "kind": "product",
+      "mass_g": 25
+    },
+    {
+      "sink_id": "s-M7-product",
+      "from_process": "M7",
+      "kind": "product",
+      "mass_g": 15
+    }
+  ]
+}

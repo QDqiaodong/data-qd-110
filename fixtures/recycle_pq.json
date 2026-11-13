@@ -1,0 +1,59 @@
+{
+  "schema_version": 2,
+  "processes": [
+    {
+      "process_id": "P"
+    },
+    {
+      "process_id": "Q"
+    }
+  ],
+  "feeds": [
+    {
+      "feed_id": "f-A-P",
+      "origin_id": "A",
+      "to_process": "P",
+      "mass_g": 90
+    },
+    {
+      "feed_id": "f-B-Q",
+      "origin_id": "B",
+      "to_process": "Q",
+      "mass_g": 10
+    }
+  ],
+  "transfers": [
+    {
+      "transfer_id": "t-P-Q",
+      "from_process": "P",
+      "to_process": "Q",
+      "mass_g": 120
+    },
+    {
+      "transfer_id": "t-Q-P",
+      "from_process": "Q",
+      "to_process": "P",
+      "mass_g": 60
+    }
+  ],
+  "sinks": [
+    {
+      "sink_id": "s-P-product",
+      "from_process": "P",
+      "kind": "product",
+      "mass_g": 30
+    },
+    {
+      "sink_id": "s-Q-product",
+      "from_process": "Q",
+      "kind": "product",
+      "mass_g": 60
+    },
+    {
+      "sink_id": "s-Q-loss",
+      "from_process": "Q",
+      "kind": "loss",
+      "mass_g": 10
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "schema_version": 2,
+  "processes": [
+    {
+      "process_id": "A"
+    },
+    {
+      "process_id": "B"
+    },
+    {
+      "process_id": "C"
+    },
+    {
+      "process_id": "X"
+    },
+    {
+      "process_id": "Y"
+    }
+  ],
+  "feeds": [
+    {
+      "feed_id": "feed-A",
+      "origin_id": "A",
+      "to_process": "A",
+      "mass_g": 1000
+    },
+    {
+      "feed_id": "feed-B",
+      "origin_id": "B",
+      "to_process": "B",
+      "mass_g": 500
+    },
+    {
+      "feed_id": "feed-C",
+      "origin_id": "C",
+      "to_process": "C",
+      "mass_g": 300
+    }
+  ],
+  "transfers": [
+    {
+      "transfer_id": "recipe-X-A",
+      "from_process": "A",
+      "to_process": "X",
+      "mass_g": 600
+    },
+    {
+      "transfer_id": "recipe-X-B",
+      "from_process": "B",
+      "to_process": "X",
+      "mass_g": 400
+    },
+    {
+      "transfer_id": "recipe-Y-X",
+      "from_process": "X",
+      "to_process": "Y",
+      "mass_g": 300
+    },
+    {
+      "transfer_id": "recipe-Y-C",
+      "from_process": "C",
+      "to_process": "Y",
+      "mass_g": 200
+    }
+  ],
+  "sinks": [
+    {
+      "sink_id": "product-A",
+      "from_process": "A",
+      "kind": "product",
+      "mass_g": 400
+    },
+    {
+      "sink_id": "product-B",
+      "from_process": "B",
+      "kind": "product",
+      "mass_g": 100
+    },
+    {
+      "sink_id": "product-C",
+      "from_process": "C",
+      "kind": "product",
+      "mass_g": 100
+    },
+    {
+      "sink_id": "product-X",
+      "from_process": "X",
+      "kind": "product",
+      "mass_g": 600
+    },
+    {
+      "sink_id": "product-Y",
+      "from_process": "Y",
+      "kind": "product",
+      "mass_g": 500
+    },
+    {
+      "sink_id": "loss-X",
+      "from_process": "X",
+      "kind": "loss",
+      "mass_g": 100
+    }
+  ]
+}
