@@ -1,0 +1,59 @@
+{
+  "lots": [
+    {
+      "lot_id": "A",
+      "kind": "raw",
+      "mass_g": 1000
+    },
+    {
+      "lot_id": "B",
+      "kind": "raw",
+      "mass_g": 500
+    },
+    {
+      "lot_id": "C",
+      "kind": "raw",
+      "mass_g": 300
+    },
+    {
+      "lot_id": "X",
+      "kind": "produced",
+      "mass_g": 900
+    },
+    {
+      "lot_id": "Y",
+      "kind": "produced",
+      "mass_g": 500
+    }
+  ],
+  "recipes": [
+    {
+      "output_lot": "Y",
+      "inputs": [
+        {
+          "lot_id": "X",
+          "mass_g": 300
+        },
+        {
+          "lot_id": "C",
+          "mass_g": 200
+        }
+      ],
+      "loss_g": 0
+    },
+    {
+      "output_lot": "X",
+      "inputs": [
+        {
+          "lot_id": "A",
+          "mass_g": 600
+        },
+        {
+          "lot_id": "B",
+          "mass_g": 400
+        }
+      ],
+      "loss_g": 100
+    }
+  ]
+}
